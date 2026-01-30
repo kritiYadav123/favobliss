@@ -2,6 +2,11 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { CategoryFormSchema } from "@/schemas/admin/category-form-schema";
+import { revalidatePath, revalidateTag } from "next/cache";
+
+const PRODUCT_TAG = "products";
+const CATEGORY_TAG = "categories";
+
 
 export async function POST(
   request: Request,
@@ -47,6 +52,18 @@ export async function POST(
         storeId: params.storeId,
       },
     });
+    // ✅ Category changes affect navigation + category pages
+    revalidateTag(CATEGORY_TAG);
+    revalidateTag(PRODUCT_TAG);
+
+    // ✅ Revalidate category page path if your storefront uses /category/[slug]
+    if (category?.slug) {
+      revalidatePath(`/category/${category.slug}`);
+    }
+
+    // Optional: also revalidate homepage/category listing pages if they exist
+    revalidatePath(`/category`);
+    revalidatePath(`/`);
 
     return NextResponse.json(category);
   } catch (error: any) {

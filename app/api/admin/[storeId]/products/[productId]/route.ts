@@ -2,12 +2,16 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { ProductSchema } from "@/schemas/admin/product-form-schema";
 import { NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
+
 
 const allowedOrigins = [
   process.env.NEXT_PUBLIC_FRONTEND_URL,
   "http://localhost:3000",
   "https://favobliss.vercel.app",
 ].filter(Boolean);
+const PRODUCT_TAG = "products";
+const CATEGORY_TAG = "categories";
 
 export async function PATCH(
   request: Request,
@@ -296,6 +300,19 @@ export async function PATCH(
       },
     });
 
+        // ✅ Purge cached product & listing data instantly (no redeploy needed)
+    revalidateTag(PRODUCT_TAG);
+    revalidateTag(CATEGORY_TAG);
+
+    // ✅ Also revalidate product detail paths (slug route is /[slug])
+    // Your frontend product route is app/(routes)/[slug]/page.tsx and slug is stored on variants
+    if (product?.variants?.length) {
+      for (const v of product.variants) {
+        if (v?.slug) revalidatePath(`/${v.slug}`);
+      }
+    }
+
+
     return NextResponse.json(product);
   } catch (error: any) {
     console.log("[PRODUCT_PATCH]", error);
@@ -339,10 +356,29 @@ export async function DELETE(
     if (!storeById) {
       return new NextResponse("Store does not exist", { status: 404 });
     }
+    // Fetch slugs before delete so we can revalidate the product pages
+    const productBeforeDelete = await db.product.findUnique({
+      where: { id: params.productId },
+      select: {
+        variants: { select: { slug: true } },
+      },
+    });
 
     const product = await db.product.delete({
       where: { id: params.productId },
     });
+
+        // ✅ Purge cached product & listing data instantly
+    revalidateTag(PRODUCT_TAG);
+    revalidateTag(CATEGORY_TAG);
+
+    // ✅ Revalidate deleted product paths so storefront stops serving it
+    if (productBeforeDelete?.variants?.length) {
+      for (const v of productBeforeDelete.variants) {
+        if (v?.slug) revalidatePath(`/${v.slug}`);
+      }
+    }
+
 
     return NextResponse.json(product);
   } catch (error: any) {

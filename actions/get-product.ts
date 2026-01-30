@@ -12,6 +12,8 @@ import {
 import { unstable_cache } from "next/cache";
 
 const STORE_ID = process.env.NEXT_PUBLIC_STORE_ID || "684315296fa373b59468f387";
+const PRODUCT_TAG = "products";
+
 
 interface ProductQuery {
   categoryId?: string;
@@ -45,7 +47,7 @@ const recentlyViewedKey = (productIds: string[], locationGroupId?: string) =>
   `recently-viewed-${productIds.sort().join("-")}-${locationGroupId || "none"}`;
 
 /* ---------- GET PRODUCT BY SLUG ---------- */
-export const getProductBySlug = unstable_cache(
+const _getProductBySlug = unstable_cache(
   async (
     slug: string,
     includeRelated = false,
@@ -53,11 +55,24 @@ export const getProductBySlug = unstable_cache(
   ): Promise<any> => {
     console.log(`[CACHE MISS] Fetching product by slug: ${slug}`);
     return await productBySlug(STORE_ID, slug, includeRelated, locationGroupId);
+  },
+  ["getProductBySlug"],
+  {
+    tags: ["products"],
+    revalidate: 86400,
   }
 );
 
+export const getProductBySlug = async (
+  slug: string,
+  includeRelated = false,
+  locationGroupId?: string
+) => _getProductBySlug(slug, includeRelated, locationGroupId);
+
+
+
 /* ---------- GET PRODUCT BY ID ---------- */
-export const getProductById = unstable_cache(
+const _getProductById = unstable_cache(
   async (
     id: string,
     includeRelated = false,
@@ -65,15 +80,39 @@ export const getProductById = unstable_cache(
   ): Promise<any> => {
     console.log(`[CACHE MISS] Fetching product by id: ${id}`);
     return await productById(STORE_ID, id, includeRelated, locationGroupId);
+  },
+  ["getProductById"],
+  {
+    tags: ["products"],
+    revalidate: 86400,
   }
 );
 
+export const getProductById = async (
+  id: string,
+  includeRelated = false,
+  locationGroupId?: string
+) => _getProductById(id, includeRelated, locationGroupId);
+
+
+
 /* ---------- GET RECENTLY VIEWED ---------- */
-export const getRecentlyViewedProducts = unstable_cache(
+const _getRecentlyViewedProducts = unstable_cache(
   async (productIds: string[], locationGroupId?: string): Promise<any[]> => {
     console.log(
       `[CACHE MISS] Fetching recently viewed: ${productIds.length} items`
     );
     return await recentlyViewedProducts(STORE_ID, productIds, locationGroupId);
+  },
+  ["getRecentlyViewedProducts"],
+  {
+    tags: ["products"],
+    revalidate: 3600,
   }
 );
+
+export const getRecentlyViewedProducts = async (
+  productIds: string[],
+  locationGroupId?: string
+) => _getRecentlyViewedProducts(productIds, locationGroupId);
+

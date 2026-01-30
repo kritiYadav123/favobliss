@@ -2,6 +2,10 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { CategoryFormSchema } from "@/schemas/admin/category-form-schema";
+import { revalidatePath, revalidateTag } from "next/cache";
+
+const PRODUCT_TAG = "products";
+const CATEGORY_TAG = "categories";
 
 export async function PATCH(
   request: Request,
@@ -39,6 +43,10 @@ export async function PATCH(
     if (!storeById) {
       return new NextResponse("Store does not exist", { status: 404 });
     }
+    const categoryBeforeUpdate = await db.category.findUnique({
+      where: { id: params.categoryId },
+      select: { slug: true },
+    });
 
     const category = await db.category.update({
       where: {
@@ -52,6 +60,21 @@ export async function PATCH(
         description,
       },
     });
+    // ✅ Purge cached category + product listing data
+    revalidateTag(CATEGORY_TAG);
+    revalidateTag(PRODUCT_TAG);
+
+    // ✅ Revalidate old + new category pages (slug may have changed)
+    if (categoryBeforeUpdate?.slug) {
+      revalidatePath(`/category/${categoryBeforeUpdate.slug}`);
+    }
+    if (category?.slug) {
+      revalidatePath(`/category/${category.slug}`);
+    }
+
+    // Optional: refresh global pages that show categories
+    revalidatePath(`/category`);
+    revalidatePath(`/`);
 
     return NextResponse.json(category);
   } catch (error: any) {
@@ -105,12 +128,28 @@ export async function DELETE(
         { status: 400 }
       );
     }
+    const categoryBeforeDelete = await db.category.findUnique({
+      where: { id: params.categoryId },
+      select: { slug: true },
+    });
 
     const category = await db.category.delete({
       where: {
         id: params.categoryId,
       },
     });
+    // ✅ Purge cached category + product listing data
+    revalidateTag(CATEGORY_TAG);
+    revalidateTag(PRODUCT_TAG);
+
+    // ✅ Revalidate deleted category page so it stops being served
+    if (categoryBeforeDelete?.slug) {
+      revalidatePath(`/category/${categoryBeforeDelete.slug}`);
+    }
+
+    // Optional: refresh global pages that show categories
+    revalidatePath(`/category`);
+    revalidatePath(`/`);
 
     return NextResponse.json(category);
   } catch (error) {

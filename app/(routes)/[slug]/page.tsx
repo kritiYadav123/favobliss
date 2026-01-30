@@ -9,7 +9,7 @@ interface ProductPageProps {
   params: { slug: string };
 }
 
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 // Validate slug early (prevents bot/file-like paths, image filenames, etc.)
 function isValidSlug(slug: string): any {
@@ -35,30 +35,6 @@ function isValidSlug(slug: string): any {
   return true;
 }
 
-export async function generateStaticParams() {
-  try {
-    const { products } = await getProducts({
-      selectFields: ["variants.slug"],
-      limit: 1000, // Number, parsed inside
-    });
-
-    if (!products?.length) {
-      console.warn("generateStaticParams: No products found");
-      return [];
-    }
-
-    // Flatten and dedupe slugs (from variants across products)
-    const uniqueSlugs = Array.from(
-      new Set(products.map((item: { slug: string }) => item.slug).filter(Boolean))
-    ).filter(isValidSlug);
-
-    return uniqueSlugs.map((slug) => ({ slug }));
-  } catch (error) {
-    console.error("Error in generateStaticParams:", error);
-    return [];
-  }
-}
-
 export async function generateMetadata(
   { params }: ProductPageProps,
   parent: ResolvingMetadata
@@ -75,7 +51,8 @@ export async function generateMetadata(
   }
 
   try {
-    const productData = await getProductBySlug(slug);
+    const productData = await getProductBySlug(slug, false, undefined);
+
 
     if (!productData || !productData.variant) {
       return {
@@ -145,7 +122,8 @@ const ProductPage = async ({ params }: ProductPageProps) => {
   try {
     // ✅ Gate all extra work behind "product exists"
     // This prevents bots hitting random slugs from triggering multiple backend calls.
-    const productData = await getProductBySlug(slug);
+    const productData = await getProductBySlug(slug, false, undefined);
+
 
     if (!productData || !productData.variant || !productData.allVariants?.length) {
       notFound();

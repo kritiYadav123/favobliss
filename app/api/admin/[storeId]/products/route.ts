@@ -2,12 +2,15 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { ProductSchema } from "@/schemas/admin/product-form-schema";
 import { NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 const allowedOrigins = [
   process.env.NEXT_PUBLIC_FRONTEND_URL,
   "http://localhost:3000",
   "https://favobliss.vercel.app",
 ].filter(Boolean);
+const PRODUCT_TAG = "products";
+const CATEGORY_TAG = "categories";
 
 export async function POST(
   request: Request,
@@ -239,6 +242,16 @@ export async function POST(
         },
       },
     });
+    // ✅ Purge cached product & listing data instantly (new products appear without rebuild)
+    revalidateTag(PRODUCT_TAG);
+    revalidateTag(CATEGORY_TAG);
+
+    // ✅ Revalidate product detail pages (slug route is /[slug])
+    if (product?.variants?.length) {
+      for (const v of product.variants) {
+        if (v?.slug) revalidatePath(`/${v.slug}`);
+      }
+    }
 
     return NextResponse.json(product);
   } catch (error: any) {
