@@ -21,13 +21,13 @@ export default auth((req) => {
   // 2) Block the worst scrapers + headless tools. Keep allowlist for major search bots.
   const goodBots = ["googlebot", "bingbot", "duckduckbot", "slurp", "yandex"];
   const badBots = [
-    "ahrefsbot",
-    "semrushbot",
+    // "ahrefsbot",
+    // "semrushbot",
     "mj12bot",
     "dotbot",
     "petalbot",
     "bytespider",
-    "gptbot",
+    // "gptbot",
     "claudebot",
     "anthropic",
     "ccbot",
@@ -38,7 +38,7 @@ export default auth((req) => {
     "curl",
     "wget",
     "headlesschrome",
-    "lighthouse",
+    // "lighthouse",
   ];
 
   const isGoodBot = goodBots.some((b) => ua.includes(b));
