@@ -7,6 +7,7 @@ import React from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { FreeMode, Mousewheel } from "swiper/modules";
 import Link from "next/link";
+import BrandLogo from "../brandLogo";
 
 interface Props {
   brands: Brand[];
@@ -14,10 +15,6 @@ interface Props {
 
 const BrandList = ({ brands }: Props) => {
   const router = useRouter();
-
-  const handleClick = (path: string) => {
-    router.push(`/brand/${path}?page=1`);
-  };
 
   if (!brands || brands.length === 0) {
     return null;
@@ -47,20 +44,14 @@ const BrandList = ({ brands }: Props) => {
               className="flex-shrink-0 w-[13.33%] min-w-[60px] max-w-[80px] md:min-w-[120px] md:max-w-[160px]"
             >
               <div className="flex flex-col items-center space-y-2">
-                <Link href={`/brand/${item.slug}?page=1`}
+                <Link
+                  href={`/brand/${item.slug}?page=1`}
                   className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 flex items-center justify-center rounded-full overflow-hidden cursor-pointer p-1 md:p-2"
                 >
                   <div className="relative w-full h-full flex items-center justify-center">
-                    <Image
-                      src={item.cardImage || "/placeholder-brand.png"}
+                    <BrandLogo
+                      src={item.cardImage}
                       alt={item.name || "Brand"}
-                      fill
-                      sizes="(max-width: 640px) 64px, (max-width: 768px) 80px, (max-width: 1024px) 96px, 112px"
-                      className="object-contain p-2"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = "/placeholder-brand.png";
-                      }}
                     />
                   </div>
                 </Link>

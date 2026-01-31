@@ -18,6 +18,7 @@ import { useCart } from "@/hooks/use-cart";
 import { useRouter } from "next/navigation";
 import { useDebounce } from "@/hooks/use-debounce";
 import Image from "next/image";
+import { useDebouncedCallback } from "@/hooks/use-debouncecallback";
 
 const searchCategories = [
   "All",
@@ -74,13 +75,6 @@ export default function HeaderMobile({
   const isMounted = useRef(true);
 
   useEffect(() => {
-    // Fetch suggested results when component mounts and searchQuery is empty
-    if (!searchQuery) {
-      debouncedSearch("");
-    }
-  }, []); // Empty dependency array to run on mount
-
-  useEffect(() => {
     return () => {
       isMounted.current = false;
     };
@@ -91,10 +85,10 @@ export default function HeaderMobile({
     const handleClickOutside = (event: MouseEvent) => {
       if (
         searchDropdownRef.current &&
-        !searchDropdownRef.current.contains(event.target as Node) &&
-        !isSearchDropdownOpen
+        !searchDropdownRef.current.contains(event.target as Node)
       ) {
         setSearchQuery("");
+        setIsSearchDropdownOpen(false);
         setShowSearchResults(false);
       }
     };
@@ -103,40 +97,23 @@ export default function HeaderMobile({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isSearchDropdownOpen]);
+  }, []);
 
   // Debounced search function
-  const debouncedSearch = useDebounce(async (query: string) => {
-    if (isMounted.current) {
-      setIsSearching(true);
-    }
-
+  const debouncedSearch = useDebouncedCallback(async (query: string) => {
+    setIsSearching(true);
     try {
       const response = await fetch(
-        `${
-          process.env.NEXT_PUBLIC_STORE_URL
-        }/api/admin/684315296fa373b59468f387/search-item?query=${encodeURIComponent(
-          query
-        )}&page=1&limit=10`,
-        { cache: "no-store" }
+        `${process.env.NEXT_PUBLIC_STORE_URL}/api/admin/684315296fa373b59468f387/search-item?query=${encodeURIComponent(query)}&page=1&limit=10`,
+        { cache: "no-store" },
       );
-      if (!response.ok) {
-        throw new Error("Failed to fetch search results");
-      }
       const data = await response.json();
       setSearchResults(data);
-      if (isMounted.current) {
-        setSearchResults(data);
-      }
     } catch (error) {
       console.error("[SEARCH_FETCH]", error);
-      if (isMounted.current) {
-        setSearchResults(null);
-      }
+      setSearchResults(null);
     } finally {
-      if (isMounted.current) {
-        setIsSearching(false);
-      }
+      setIsSearching(false);
     }
   }, 800);
 
@@ -159,7 +136,7 @@ export default function HeaderMobile({
   // }
 
   const transformCategoriesToMenuCategories = (
-    apiCategories: any[]
+    apiCategories: any[],
   ): MenuCategory[] => {
     return apiCategories.map((category) => {
       const menuCategory: MenuCategory = {
@@ -189,7 +166,7 @@ export default function HeaderMobile({
                   label: childSubCat.name,
                   href: `/category/${category.slug}?sub=${subCat.slug}&childsub=${childSubCat.slug}?page=1`,
                   count: 0,
-                })
+                }),
               );
             }
           });
@@ -203,7 +180,7 @@ export default function HeaderMobile({
 
           if (
             category.subCategories.some(
-              (subCat: any) => subCat.childSubCategories?.length > 0
+              (subCat: any) => subCat.childSubCategories?.length > 0,
             )
           ) {
             const allChildSubCategories: MenuItem[] = [];
@@ -247,14 +224,14 @@ export default function HeaderMobile({
     setOpenCategories((prev) =>
       prev.includes(categoryName)
         ? prev.filter((name) => name !== categoryName)
-        : [...prev, categoryName]
+        : [...prev, categoryName],
     );
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && searchQuery.trim()) {
       router.push(
-        `/search?query=${encodeURIComponent(searchQuery.trim())}&page=1`
+        `/search?query=${encodeURIComponent(searchQuery.trim())}&page=1`,
       );
       setShowSearchResults(false);
       setSearchQuery("");
@@ -331,7 +308,12 @@ export default function HeaderMobile({
               className="w-full py-2 px-4 text-black focus:outline-none text-sm h-10"
               value={searchQuery}
               onChange={handleSearchChange}
-              onFocus={() => setShowSearchResults(true)}
+              onFocus={() => {
+                setShowSearchResults(true);
+                if (!searchQuery.trim()) {
+                  debouncedSearch("");
+                }
+              }}
               onKeyDown={handleKeyDown}
             />
             <button
@@ -388,7 +370,7 @@ export default function HeaderMobile({
                                 setSelectedCategory(subCategory.name);
                                 setIsSearchDropdownOpen(false);
                                 router.push(
-                                  `/category/${category.slug}?sub=${subCategory.slug}&page=1`
+                                  `/category/${category.slug}?sub=${subCategory.slug}&page=1`,
                                 );
                               }}
                               className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-50 transition-colors group"
@@ -422,7 +404,7 @@ export default function HeaderMobile({
                                 setSelectedCategory(category.name);
                                 setIsSearchDropdownOpen(false);
                                 router.push(
-                                  `/category/${category.slug}?page=1`
+                                  `/category/${category.slug}?page=1`,
                                 );
                               }}
                               className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-50 transition-colors"
@@ -540,9 +522,11 @@ export default function HeaderMobile({
                   </h3>
                 </div>
                 <div className="overflow-y-auto max-h-[350px]">
-                  {isSearching ? (
-                    <div className="px-3 py-2 text-sm text-gray-700">
-                      Loading products...
+                  {true ? (
+                    <div className="px-3 py-2 text-sm text-gray-700 relative h-[150px]">
+                      <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-50">
+                            <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-black" />
+                          </div>
                     </div>
                   ) : (
                     <div className="py-2">
@@ -553,7 +537,7 @@ export default function HeaderMobile({
                               key={product.id}
                               onClick={() =>
                                 handleResultClick(
-                                  `/${product?.variants[0]?.slug}`
+                                  `/${product?.variants[0]?.slug}`,
                                 )
                               }
                               className="w-full text-left px-3 py-2 hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0"
@@ -712,14 +696,14 @@ export default function HeaderMobile({
                                 e.preventDefault();
                                 e.stopPropagation();
                                 toggleCategory(
-                                  `${category.name}-${item.label}`
+                                  `${category.name}-${item.label}`,
                                 );
                               }}
                               className="focus:outline-none"
                               aria-label="subcategories toggle"
                             >
                               {openCategories.includes(
-                                `${category.name}-${item.label}`
+                                `${category.name}-${item.label}`,
                               ) ? (
                                 <Minus size={14} className="text-gray-400" />
                               ) : (
@@ -730,7 +714,7 @@ export default function HeaderMobile({
                           <div
                             className={`overflow-hidden transition-all duration-300 ease-in-out ${
                               openCategories.includes(
-                                `${category.name}-${item.label}`
+                                `${category.name}-${item.label}`,
                               )
                                 ? "max-h-[1000px]"
                                 : "max-h-0"
@@ -786,8 +770,8 @@ export default function HeaderMobile({
                           {category.name === "ELECTRONICS"
                             ? "Air Coolers"
                             : category.name === "COMPUTER & PRINTER"
-                            ? "Computer Accessories"
-                            : "Top Categories"}
+                              ? "Computer Accessories"
+                              : "Top Categories"}
                         </h4>
                         <div className="pl-4 pt-2 space-y-1">
                           {category.subItems.map((subItem) => (

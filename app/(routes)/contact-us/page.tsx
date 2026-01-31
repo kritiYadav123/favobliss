@@ -1,5 +1,45 @@
 import React from "react";
 import { Mail, MessageCircle, Phone, MapPin, Clock, Send } from "lucide-react";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Contact Us | FavoBliss - We're Here to Help",
+  description:
+    "Have questions about your order, products, or need assistance? Reach out to FavoBliss via WhatsApp, Email or get support during business hours.",
+  keywords: [
+    "contact favobliss",
+    "customer support",
+    "whatsapp support",
+    "email support",
+    "ecommerce help india",
+  ].join(", "),
+  openGraph: {
+    title: "Contact FavoBliss – Fast & Friendly Support",
+    description:
+      "Chat with us on WhatsApp or send an email. We usually reply within 1-2 hours during working hours.",
+    url: "https://favobliss.com/contact",
+    siteName: "FavoBliss",
+    images: [
+      {
+        url: "https://www.electrax.in/assets/logo.jpg", 
+        width: 1200,
+        height: 630,
+        alt: "FavoBliss Contact Support",
+      },
+    ],
+    locale: "en_IN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Contact Us | FavoBliss Support",
+    description: "Reach out via WhatsApp or Email – quick response guaranteed!",
+    images: ["https://www.electrax.in/assets/logo.jpg"],
+  },
+  alternates: {
+    canonical: "https://favobliss.com/contact",
+  },
+};
 
 export default function ContactUsPage() {
   const contactMethods = [

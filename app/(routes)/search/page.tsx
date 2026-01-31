@@ -10,10 +10,13 @@ import SearchProductListClient from "@/components/store/SearchProductListCIient"
 import { getSearchItem } from "@/actions/get-search-item";
 import { NoResults } from "@/components/store/no-results";
 
+import { Filter } from "./_components/filter";
+import { MobileFilters } from "./_components/mobile-filters";
+
 async function withRetry<T>(
   fn: () => Promise<T>,
   retries = 3,
-  delay = 100
+  delay = 100,
 ): Promise<T> {
   try {
     return await fn();
@@ -39,7 +42,7 @@ interface SearchPageProps {
 
 export async function generateMetadata(
   { searchParams }: SearchPageProps,
-  parent: ResolvingMetadata
+  parent: ResolvingMetadata,
 ): Promise<Metadata> {
   const previousImages = (await parent).openGraph?.images || [];
 
@@ -70,7 +73,18 @@ export async function generateMetadata(
 const Search = async ({ searchParams }: SearchPageProps) => {
   const query = searchParams.query || "";
 
-  // Fetch shared filter data server-side (static for the page shell)
+  if (!query) {
+    return (
+      <div className="bg-white">
+        <Container>
+          <div className="px-4 sm:px-6 lg:px-8 pt-5 pb-24">
+            <NoResults />
+          </div>
+        </Container>
+      </div>
+    );
+  }
+
   const [sizes, colors, brands, locationGroups] = await Promise.all([
     withRetry(() => getSizes()),
     withRetry(() => getColors()),
@@ -78,12 +92,14 @@ const Search = async ({ searchParams }: SearchPageProps) => {
     withRetry(() => getLocationGroups()),
   ]);
 
-  // Lightweight fetch just to get classification for size filtering (limit=1, no filters)
+  // Keep your classification logic (important for search)
   let classification = "TOPWEAR";
   if (query) {
-    const baseKeyword = { query, limit: "1", page: 1 };
-    const baseResults = await withRetry(() => getSearchItem(baseKeyword as any));
-    classification = baseResults.products[0]?.category?.classification || "TOPWEAR";
+    const baseResults = await withRetry(() =>
+      getSearchItem({ query, limit: "1", page: 1 } as any),
+    );
+    classification =
+      baseResults.products[0]?.category?.classification || "TOPWEAR";
   }
 
   const sizeMap: { [key: string]: string[] } = {
@@ -97,7 +113,6 @@ const Search = async ({ searchParams }: SearchPageProps) => {
     FRAGRANCES: [],
     TELEVISION: [],
   };
-
   const validSizes = sizeMap[classification] || [];
   const filteredSizes = sizes.filter((size) => validSizes.includes(size.name));
 
@@ -108,7 +123,6 @@ const Search = async ({ searchParams }: SearchPageProps) => {
     { id: "30000-80000", name: "Rs. 30000 to Rs. 80000", value: "30000-80000" },
     { id: "80000", name: "Above Rs. 80000", value: "80000" },
   ];
-
   const ratingRanges = [
     { id: "4", name: "4★ & above", value: "4" },
     { id: "3", name: "3★ & above", value: "3" },
@@ -126,34 +140,54 @@ const Search = async ({ searchParams }: SearchPageProps) => {
     { id: "10", name: "10% and above", value: "10" },
   ];
 
-  const breadcrumbItems = query
-    ? [{ label: query.toUpperCase(), href: `/search?query=${query}&page=1` }]
-    : [];
-
-  if (!query) {
-    return (
-      <div className="bg-white">
-        <Container>
-          <div className="px-4 sm:px-6 lg:px-8 pt-5 pb-24">
-            <NoResults />
-          </div>
-        </Container>
-      </div>
-    );
-  }
+  const breadcrumbItems = [
+    { label: query.toUpperCase(), href: `/search?query=${query}&page=1` },
+  ];
 
   return (
     <div className="bg-white">
       <Breadcrumb items={breadcrumbItems} />
+
+      {/* Optional: Simple search header (no banner like category) */}
+      <div className="bg-gray-50 py-6">
+        <Container>
+          <h1 className="text-2xl md:text-3xl font-bold px-4">
+            Search results for &quot;
+            <span className="text-blue-600">{query}</span>&quot;
+          </h1>
+        </Container>
+      </div>
+
       <Container>
         <div className="px-4 sm:px-6 lg:px-8 pt-5 pb-24">
-          <div className="lg:grid lg:grid-cols-5 lg:gap-x-8 mt-14">
-            {/* Filters are currently commented in your original code — keeping them disabled */}
-            {/* If you want to enable them later, uncomment and pass props */}
-            {/* <MobileFilters ... /> */}
-            {/* <div className="hidden lg:block ..."> ...filters... </div> */}
+          <div className="lg:grid lg:grid-cols-5 lg:gap-x-8 mt-6">
+            {/* Mobile Filters */}
+            <MobileFilters
+              sizes={filteredSizes}
+              colors={colors}
+              brands={brands}
+              priceRanges={priceRange}
+              ratingRanges={ratingRanges}
+              discountRanges={discountRanges}
+            />
 
-            <div className="mt-6 lg:col-span-5 lg:mt-4 min-w-[90vw]">
+            {/* Desktop Filters Sidebar */}
+            <div className="hidden lg:block lg:border-r lg:col-span-1">
+              <h3 className="mb-5 text-lg font-bold">Filters</h3>
+              {/* <Filter valueKey="sizeId" name="Sizes" data={filteredSizes} /> */}
+              <Filter valueKey="colorId" name="Colors" data={colors} />
+              <Filter valueKey="price" name="Price" data={priceRange} />
+              <Filter valueKey="brandId" name="Brands" data={brands} />
+              <Filter valueKey="rating" name="Ratings" data={ratingRanges} />
+              <Filter
+                valueKey="discount"
+                name="Discount"
+                data={discountRanges}
+              />
+            </div>
+
+            {/* Product Content Area */}
+            <div className="mt-6 lg:col-span-4 lg:mt-4">
               <SearchProductListClient
                 searchQuery={query}
                 locationGroups={locationGroups}

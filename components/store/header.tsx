@@ -16,6 +16,7 @@ import { useAddress } from "@/hooks/use-address";
 import PincodeDialog from "./PincodeDialog";
 import { getLocationGroups } from "@/actions/get-location-group";
 import Image from "next/image";
+import { useDebouncedCallback } from "@/hooks/use-debouncecallback";
 
 const searchCategories = [
   "All",
@@ -81,11 +82,11 @@ export default function DynamicHeader({
     const handleClickOutside = (event: MouseEvent) => {
       if (
         searchDropdownRef.current &&
-        !searchDropdownRef.current.contains(event.target as Node) &&
-        !isSearchDropdownOpen
+        !searchDropdownRef.current.contains(event.target as Node)
       ) {
         // setSearchResults(null);
-        setSearchQuery("");
+        setIsSearchDropdownOpen(false);
+        // setSearchQuery("");
         setShowSearchResults(false);
       }
     };
@@ -94,13 +95,24 @@ export default function DynamicHeader({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isSearchDropdownOpen]);
-
-  useEffect(() => {
-    if (!searchQuery) {
-      debouncedSearch("");
-    }
   }, []);
+
+  const debouncedSearch = useDebouncedCallback(async (query: string) => {
+    setIsSearching(true);
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_STORE_URL}/api/admin/684315296fa373b59468f387/search-item?query=${encodeURIComponent(query)}&page=1&limit=10`,
+        { cache: "no-store" },
+      );
+      const data = await response.json();
+      setSearchResults(data);
+    } catch (error) {
+      console.error("[SEARCH_FETCH]", error);
+      setSearchResults(null);
+    } finally {
+      setIsSearching(false);
+    }
+  }, 800);
 
   useEffect(() => {
     return () => {
@@ -129,7 +141,7 @@ export default function DynamicHeader({
 
       if (session?.user && addresses?.length && !isAddressLoading) {
         const defaultAddress = addresses.find(
-          (address: Address) => address.isDefault
+          (address: Address) => address.isDefault,
         );
 
         if (defaultAddress) {
@@ -143,12 +155,12 @@ export default function DynamicHeader({
             };
 
             const currentLocation = JSON.parse(
-              localStorage.getItem("locationData") || "{}"
+              localStorage.getItem("locationData") || "{}",
             );
             if (currentLocation.pincode !== addressPincode) {
               localStorage.setItem(
                 "locationData",
-                JSON.stringify(locationData)
+                JSON.stringify(locationData),
               );
               window.dispatchEvent(new Event("locationDataUpdated"));
             }
@@ -172,12 +184,12 @@ export default function DynamicHeader({
             };
 
             const currentLocation = JSON.parse(
-              localStorage.getItem("locationData") || "{}"
+              localStorage.getItem("locationData") || "{}",
             );
             if (currentLocation.pincode !== addressPincode) {
               localStorage.setItem(
                 "locationData",
-                JSON.stringify(locationData)
+                JSON.stringify(locationData),
               );
               window.dispatchEvent(new Event("locationDataUpdated"));
             }
@@ -212,39 +224,39 @@ export default function DynamicHeader({
     };
   }, [session, addresses, isAddressLoading]);
 
-  const debouncedSearch = useDebounce(async (query: string) => {
-    if (isMounted.current) {
-      setIsSearching(true);
-    }
+  // const debouncedSearch = useDebounce(async (query: string) => {
+  //   if (isMounted.current) {
+  //     setIsSearching(true);
+  //   }
 
-    try {
-      const response = await fetch(
-        `${
-          process.env.NEXT_PUBLIC_STORE_URL
-        }/api/admin/684315296fa373b59468f387/search-item?query=${encodeURIComponent(
-          query
-        )}&page=1&limit=10`,
-        { cache: "no-store" }
-      );
-      if (!response.ok) {
-        throw new Error("Failed to fetch search results");
-      }
-      const data = await response.json();
-      setSearchResults(data);
-      if (isMounted.current) {
-        setSearchResults(data);
-      }
-    } catch (error) {
-      console.error("[SEARCH_FETCH]", error);
-      if (isMounted.current) {
-        setSearchResults(null);
-      }
-    } finally {
-      if (isMounted.current) {
-        setIsSearching(false);
-      }
-    }
-  }, 800);
+  //   try {
+  //     const response = await fetch(
+  //       `${
+  //         process.env.NEXT_PUBLIC_STORE_URL
+  //       }/api/admin/684315296fa373b59468f387/search-item?query=${encodeURIComponent(
+  //         query,
+  //       )}&page=1&limit=10`,
+  //       { cache: "no-store" },
+  //     );
+  //     if (!response.ok) {
+  //       throw new Error("Failed to fetch search results");
+  //     }
+  //     const data = await response.json();
+  //     setSearchResults(data);
+  //     if (isMounted.current) {
+  //       setSearchResults(data);
+  //     }
+  //   } catch (error) {
+  //     console.error("[SEARCH_FETCH]", error);
+  //     if (isMounted.current) {
+  //       setSearchResults(null);
+  //     }
+  //   } finally {
+  //     if (isMounted.current) {
+  //       setIsSearching(false);
+  //     }
+  //   }
+  // }, 800);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
@@ -367,7 +379,7 @@ export default function DynamicHeader({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && searchQuery.trim()) {
       router.push(
-        `/search?query=${encodeURIComponent(searchQuery.trim())}&page=1`
+        `/search?query=${encodeURIComponent(searchQuery.trim())}&page=1`,
       );
       setShowSearchResults(false);
       setSearchQuery("");
@@ -472,7 +484,12 @@ export default function DynamicHeader({
                   className="w-full py-2.5 px-4 text-black focus:outline-none text-sm"
                   value={searchQuery}
                   onChange={handleSearchChange}
-                  onFocus={() => setShowSearchResults(true)}
+                  onFocus={() => {
+                    setShowSearchResults(true);
+                    if (!searchQuery.trim()) {
+                      debouncedSearch("");
+                    }
+                  }}
                   onKeyDown={handleKeyDown}
                 />
                 <button className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1.5 rounded transition-colors">
@@ -544,7 +561,7 @@ export default function DynamicHeader({
                                       setSelectedCategory(subCategory.name);
                                       setIsSearchDropdownOpen(false);
                                       router.push(
-                                        `/category/${category.slug}?sub=${subCategory.slug}&page=1`
+                                        `/category/${category.slug}?sub=${subCategory.slug}&page=1`,
                                       );
                                     }}
                                     className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-50 transition-colors group"
@@ -572,7 +589,7 @@ export default function DynamicHeader({
                                       {subCategory.name}
                                     </span>
                                   </button>
-                                )
+                                ),
                               )}
 
                               {/* Show more button if there are more than 8 subcategories */}
@@ -582,7 +599,7 @@ export default function DynamicHeader({
                                     setSelectedCategory(category.name);
                                     setIsSearchDropdownOpen(false);
                                     router.push(
-                                      `/category/${category.slug}?page=1`
+                                      `/category/${category.slug}?page=1`,
                                     );
                                   }}
                                   className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-50 transition-colors"
@@ -618,12 +635,13 @@ export default function DynamicHeader({
                     </div>
                     <div className="overflow-y-auto max-h-[300px]">
                       {isSearching ? (
-                        <div className="px-4 py-3 text-sm text-gray-700">
-                          Searching...
+                        <div className="px-4 py-3 text-sm text-gray-700 relative h-[200px]">
+                          <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-50">
+                            <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-black" />
+                          </div>
                         </div>
                       ) : (
                         <div className="py-2">
-                          {/* Categories */}
                           {(searchResults?.categories ?? []).length > 0 && (
                             <>
                               {searchResults?.categories.map((category) => (
@@ -631,7 +649,7 @@ export default function DynamicHeader({
                                   key={category.id}
                                   onClick={() =>
                                     handleResultClick(
-                                      `/category/${category.slug}?page=1`
+                                      `/category/${category.slug}?page=1`,
                                     )
                                   }
                                   className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors border-b border-gray-100 last:border-b-0"
@@ -654,14 +672,14 @@ export default function DynamicHeader({
                                         `/category/${
                                           subCategory.category?.slug ||
                                           "unknown"
-                                        }?sub=${subCategory.slug}?page=1`
+                                        }?sub=${subCategory.slug}?page=1`,
                                       )
                                     }
                                     className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors border-b border-gray-100 last:border-b-0"
                                   >
                                     {subCategory.name}
                                   </button>
-                                )
+                                ),
                               )}
                             </>
                           )}
@@ -674,7 +692,7 @@ export default function DynamicHeader({
                                   key={brand.id}
                                   onClick={() =>
                                     handleResultClick(
-                                      `/brand/${brand.slug}?page=1`
+                                      `/brand/${brand.slug}?page=1`,
                                     )
                                   }
                                   className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors border-b border-gray-100 last:border-b-0"
@@ -712,8 +730,10 @@ export default function DynamicHeader({
                     </div>
                     <div className="overflow-y-auto max-h-[300px]">
                       {isSearching ? (
-                        <div className="px-4 py-3 text-sm text-gray-700">
-                          Loading products...
+                        <div className="px-4 py-3 text-sm text-gray-700 relative h-[200px]">
+                          <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-50">
+                            <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-black" />
+                          </div>
                         </div>
                       ) : (
                         <div className="py-2">
@@ -724,7 +744,7 @@ export default function DynamicHeader({
                                   key={product.id}
                                   onClick={() =>
                                     handleResultClick(
-                                      `/${product?.variants[0]?.slug}`
+                                      `/${product?.variants[0]?.slug}`,
                                     )
                                   }
                                   className="w-full text-left px-4 py-3 hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0"
