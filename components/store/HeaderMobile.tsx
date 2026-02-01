@@ -522,7 +522,7 @@ export default function HeaderMobile({
                   </h3>
                 </div>
                 <div className="overflow-y-auto max-h-[350px]">
-                  {true ? (
+                  {isSearching ? (
                     <div className="px-3 py-2 text-sm text-gray-700 relative h-[150px]">
                       <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-50">
                             <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-black" />
