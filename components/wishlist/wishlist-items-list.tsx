@@ -12,7 +12,7 @@ interface WishlistItemsListProps {
     data : Product[]
 }
 
-export const revalidate = 0;
+export const dynamic = "force-dynamic";
 
 export const WishlistItemsList = ({
     data  

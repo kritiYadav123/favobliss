@@ -16,16 +16,25 @@ export async function GET(request: Request) {
     discount: searchParams.get("discount") || undefined,
     type: searchParams.get("type") as "MEN" | "WOMEN" | undefined,
     isFeatured: searchParams.get("isFeatured") === "true" ? true : undefined,
-    isNewArrival: searchParams.get("isNewArrival") === "true" ? true : undefined,
+    isNewArrival:
+      searchParams.get("isNewArrival") === "true" ? true : undefined,
     page: searchParams.get("page") ? parseInt(searchParams.get("page")!) : 1,
     limit: "12",
   };
 
   try {
     const { products, totalCount } = await getProducts(query as any);
-    return NextResponse.json({ products, totalCount });
+    return NextResponse.json(
+      { products, totalCount },
+      {
+        headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=300" },
+      },
+    );
   } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch products" },
+      { status: 500 },
+    );
   }
 }
 

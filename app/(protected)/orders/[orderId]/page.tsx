@@ -28,8 +28,8 @@ import { OrderProduct } from "@prisma/client";
 interface OrderDetailsPageProps {
   params: { orderId: string };
 }
+export const dynamic = "force-dynamic";
 
-export const revalidate = 0;
 
 const OrderDetailsPage = async ({ params }: OrderDetailsPageProps) => {
   const orderProduct = await getOrderProductById(params.orderId);

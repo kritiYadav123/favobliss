@@ -22,7 +22,6 @@ const Dropdown = ({ items, editor }: Props) => {
         <button
           key={item.label}
           onClick={() => {
-            console.log("Clicked", item);
             item.command?.(editor)}}
           className={`flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 ${
             item.isActive?.(editor) ? "bg-gray-100" : ""

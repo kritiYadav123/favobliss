@@ -4,6 +4,7 @@ export const privateRoutes: string[] = [
   "/my/dashboard",
   "/my/profile",
   "/my/address",
+  "/admin"
 ];
 
 export const authRoutes = [

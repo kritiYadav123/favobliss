@@ -23,7 +23,11 @@ export const GET = async (request: Request) => {
 
   try {
     const results = await getSearchItem(keyword as any);
-    return NextResponse.json(results);
+    return NextResponse.json(
+  { results },
+  { headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=300" } }
+);
+
   } catch (error) {
     return NextResponse.json({ error: "Failed to search products" }, { status: 500 });
   }

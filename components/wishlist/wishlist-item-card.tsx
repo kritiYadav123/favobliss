@@ -13,7 +13,8 @@ interface WishlistItemCardProps {
   setItem: (productId: string) => void;
 }
 
-export const revalidate = 0;
+export const dynamic = "force-dynamic";
+
 
 export const WishlistItemCard = ({ data, setItem }: WishlistItemCardProps) => {
   const router = useRouter();
